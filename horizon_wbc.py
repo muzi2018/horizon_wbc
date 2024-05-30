@@ -40,7 +40,7 @@ if srdf == '':
 
 
 ns = 0
-with open('/home/wang/horizon_wbc/output.txt', 'r') as file:
+with open('/home/wang/horizon_wbc/centauro_door.txt', 'r') as file:
     lines = file.readlines()
 matrix = []
 for line in lines:
@@ -51,10 +51,10 @@ ns = ns - 1
 T = 5.
 dt = T / ns
 
-
-prb = Problem(ns, receding=True, casadi_type=cs.SX)
+# each buff is 100 nodes
+buff = 100
+prb = Problem(buff, receding=True, casadi_type=cs.SX)
 prb.setDt(dt)
-
 # try construct RobotInterface
 cfg = co.ConfigOptions()
 cfg.set_urdf(urdf)
@@ -63,10 +63,8 @@ cfg.generate_jidmap()
 cfg.set_string_parameter('model_type', 'RBDL')
 cfg.set_string_parameter('framework', 'ROS')
 cfg.set_bool_parameter('is_model_floating_base', True)
-
 # robot = xbot.RobotInterface(cfg)
 # robot.sense()
-
 # q_init = robot.getJointPositionMap()
 q_init = {
     "ankle_pitch_1": -0.301666,
@@ -108,27 +106,19 @@ q_init = {
 }
 
 base_init = np.array([0, 0, 0.8, 0, 0, 0, 1])
-
 urdf = urdf.replace('continuous', 'revolute')
-
 fixed_joints_map = dict()
 # fixed_joints_map.update({'j_wheel_1': 0., 'j_wheel_2': 0., 'j_wheel_3': 0., 'j_wheel_4': 0.})
-
 kin_dyn  = casadi_kin_dyn.CasadiKinDyn(urdf)
-
 model = FullModelInverseDynamics(problem=prb,
                                  kd=kin_dyn,
                                  q_init=q_init,
                                  base_init=base_init)
-
 bashCommand = 'rosrun robot_state_publisher robot_state_publisher'
 process = subprocess.Popen(bashCommand.split(), start_new_session=True)
-
 ti = TaskInterface(prb=prb, model=model)
 ti.setTaskFromYaml(os.getcwd() + '/centauro_wbc_config.yaml')
-
-pm = pymanager.PhaseManager(ns+1)
-
+pm = pymanager.PhaseManager(buff+1)
 c_phases = dict()
 for c in model.getContactMap():
     c_phases[c] = pm.addTimeline(f'{c}_timeline')
@@ -142,51 +132,40 @@ for c in model.getContactMap():
         raise Exception(f'Task {c} not found')
     
     c_phases[c].registerPhase(stance_phase)
-
 for c in model.getContactMap():
     stance = c_phases[c].getRegisteredPhase(f'stance_{c}')
     while c_phases[c].getEmptyNodes() > 0:
         c_phases[c].addPhase(stance)
-
+# abstract phase
 matrix_np = np.array(matrix)
 matrix_np_ = matrix_np
-# matrix_np_ = np.zeros((matrix_np.shape[0], matrix_np.shape[1] + 1))
-# matrix_np_[:, 0:3] = matrix_np[:, 0:3]
-
-
-# for i in range(matrix_np.shape[0]):
-#     ori_vector = matrix_np[i, 3:6].flatten()
-#     r = R.from_rotvec(ori_vector)
-#     quat = r.as_quat()
-#     matrix_np_[i, 3:7] = quat
-# matrix_np_[:, 8:] = matrix_np[:, 7:]
-
-
-print("matrix_np.shape = ", matrix_np.shape)
-print("matrix_np_.shape = ", matrix_np_.shape)
-
-# exit()
-
-
-reference = prb.createParameter('upper_body_reference', 23, nodes=range(ns+1))
+print("matrix_np_.shape = ", matrix_np_.shape) # matrix_np.shape =  (418, 23)
+rows = matrix_np_.shape[0]
+cols = matrix_np_.shape[1]
+print("cols = ", cols)
+num = rows // buff
+# quotient, remainder = divmod(rows, buff)
+# print("remainder", remainder)
+matrix_np_arr = np.zeros((num, buff, cols)) # 4 x 100 x 23
+print("matrix_np_arr.shape = ", matrix_np_arr.shape)
+print("shape = ", matrix_np_arr[0,:,:].shape)
+jjjj = np.zeros((buff, cols))
+################################Programe#################################
+reference = prb.createParameter('upper_body_reference', 23, nodes=range(buff+1))
 # for i in range(21):
 #     reference[i] = matrix[i][0]
 #    x y z;4 quan; yaw_joint , 6 left arm, 6 right arm, 1 grippers + 2 headjoints = 7 + 15
 
 prb.createResidual('upper_body_trajectory', 5 * (cs.vertcat(model.q[:7], model.q[-16:]) - reference))
-# exit()
-
-reference.assign(matrix_np_.T)
-print (reference.shape)
+reference.assign(matrix_np_arr[0,:,:].T)
+exit()
 
 #
 # reference.assign(matrix 21 x 100)
-
 model.q.setBounds(model.q0, model.q0, nodes=0)
-# model.q[0].setBounds(model.q0[0] + 1, model.q0[0] + 1, nodes=ns)
+# model.q[0].setBounds(model.q0[0] + 1, model.q0[0] + 1, nodes=buff)
 model.v.setBounds(np.zeros(model.nv), np.zeros(model.nv), nodes=0)
-model.v.setBounds(np.zeros(model.nv), np.zeros(model.nv), nodes=ns)
-
+model.v.setBounds(np.zeros(model.nv), np.zeros(model.nv), nodes=buff)
 q_min = kin_dyn.q_min()
 q_max = kin_dyn.q_max()
 print(kin_dyn.joint_names())
@@ -194,53 +173,29 @@ print(q_min)
 print(q_max)
 prb.createResidual('lower_limits', 30 * utils.barrier(model.q[-3] - q_min[-3]))
 prb.createResidual('upper_limits', 30 * utils.barrier1(model.q[-3] - q_max[-3]))
-
 # prb.createResidual('support_polygon', wheel1 - whheel2 = fixed_disanace)
 f0 = [0, 0, kin_dyn.mass() / 4 * 9.81]
 for cname, cforces in model.getContactMap().items():
     for c in cforces:
         c.setInitialGuess(f0)
-
 ti.finalize()
 # ti.load_initial_guess()
-ti.bootstrap()
+for i in range(num):
+    reference.assign(matrix_np_.T)
+    ti.bootstrap()
+    solution = ti.solution
+    arr[i] = solution['q']
 
-
-
-
-solution = ti.solution
 print("solution['q'].shape = ", solution['q'].shape)
-# print(solution['q'][12, :])
-# exit()
-## publish plot data
-
-
-# publish solution server
-
-publish_bool = False
-def start_plot(req):
-    global publish_bool
-    publish_bool = not publish_bool
-    return EmptyResponse()
-service = rospy.Service('plot', Empty, start_plot)
-
-# rospy.Service('service_name', ServiceType, callback_function).
-
-
-
+arr = np.zeros((solution['q'].shape[0], solution['q'].shape[1]))
+arr = solution['q']
 
 
 rate = rospy.Rate(10) # 10hz
 while not rospy.is_shutdown():
-    repl = replay_trajectory.replay_trajectory(prb.getDt(), kin_dyn.joint_names(), solution['q'], kindyn=kin_dyn, trajectory_markers=model.getContactMap().keys())
+    repl = replay_trajectory.replay_trajectory(prb.getDt(), kin_dyn.joint_names(), arr, kindyn=kin_dyn, trajectory_markers=model.getContactMap().keys())
     repl.replay(is_floating_base=True)
-    rate.sleep()
 exit()
-
-
-
-exit()
-
 time = 0
 i = 0
 rate = rospy.Rate(1./dt)
