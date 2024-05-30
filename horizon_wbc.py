@@ -7,6 +7,7 @@ from horizon.utils import utils
 import phase_manager.pymanager as pymanager
 import phase_manager.pyphase as pyphase
 
+import std_msgs.msg
 from xbot_interface import config_options as co
 from xbot_interface import xbot_interface as xbot
 
@@ -23,6 +24,7 @@ from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Path
 # from std_msgs.msg import Float64
 import std_msgs
+from std_srvs.srv import Empty, EmptyResponse
 rospy.init_node('horizon_wbc_node')
 
 
@@ -167,7 +169,7 @@ matrix_np_ = matrix_np
 print("matrix_np.shape = ", matrix_np.shape)
 print("matrix_np_.shape = ", matrix_np_.shape)
 
-
+# exit()
 
 
 reference = prb.createParameter('upper_body_reference', 23, nodes=range(ns+1))
@@ -194,8 +196,8 @@ q_max = kin_dyn.q_max()
 print(kin_dyn.joint_names())
 print(q_min)
 print(q_max)
-prb.createResidual('lower_limits', 20 * utils.barrier(model.q - q_min))
-prb.createResidual('upper_limits', 20 * utils.barrier1(model.q - q_max))
+prb.createResidual('lower_limits', 30 * utils.barrier(model.q - q_min))
+prb.createResidual('upper_limits', 30 * utils.barrier1(model.q - q_max))
 
 # prb.createResidual('support_polygon', wheel1 - whheel2 = fixed_disanace)
 f0 = [0, 0, kin_dyn.mass() / 4 * 9.81]
@@ -207,23 +209,36 @@ ti.finalize()
 # ti.load_initial_guess()
 ti.bootstrap()
 
+
+
+
 solution = ti.solution
-print("solution['q'].shape[1] = ", solution['q'].shape[1])
+print("solution['q'].shape[1] = ", solution['q'].shape)
 ## publish plot data
-pub = rospy.Publisher('ref_', std_msgs.msg.Float64, queue_size=10)
-msg = std_msgs.msg.Float64()
+
+
+# publish solution server
+
+publish_bool = False
+def start_plot(req):
+    global publish_bool
+    publish_bool = not publish_bool
+    return EmptyResponse()
+service = rospy.Service('plot', Empty, start_plot)
+
+# rospy.Service('service_name', ServiceType, callback_function).
+
+
+
+
+
 rate = rospy.Rate(10) # 10hz
 while not rospy.is_shutdown():
-    msg = std_msgs.msg.Float64()
-    for i in range(solution['q'].shape[1]):
-        msg.data = solution['q'][0,i]
-        pub.publish(msg)
-        rate.sleep()
+    repl = replay_trajectory.replay_trajectory(prb.getDt(), kin_dyn.joint_names(), solution['q'], kindyn=kin_dyn, trajectory_markers=model.getContactMap().keys())
+    repl.replay(is_floating_base=True)
+    rate.sleep()
 exit()
 
-
-repl = replay_trajectory.replay_trajectory(prb.getDt(), kin_dyn.joint_names(), solution['q'], kindyn=kin_dyn, trajectory_markers=model.getContactMap().keys())
-repl.replay(is_floating_base=True)
 
 
 exit()
@@ -235,10 +250,17 @@ rate = rospy.Rate(1./dt)
 
 while time <= T:
     robot.setPositionReference(solution['q'][7:,i])
-    robot.move()
+    robot.move() 
     time += dt
     i += 1
     rate.sleep()
+
+
+
+
+
+
+
 
 
 
