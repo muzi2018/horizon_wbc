@@ -73,10 +73,10 @@ q_init = {
     "ankle_pitch_2": 0.301666,
     "ankle_pitch_3": 0.301667,
     "ankle_pitch_4": -0.30166,
-    "ankle_yaw_1": 0.746874,
-    "ankle_yaw_2": -0.746874,
-    "ankle_yaw_3": -0.746874,
-    "ankle_yaw_4": 0.746874,
+    "ankle_yaw_1": 0.7070,
+    "ankle_yaw_2": -0.7070,
+    "ankle_yaw_3": -0.7070,
+    "ankle_yaw_4": 0.7070,
     "d435_head_joint": 0,
     "hip_pitch_1": -1.25409,
     "hip_pitch_2": 1.25409,
@@ -114,13 +114,12 @@ urdf = urdf.replace('continuous', 'revolute')
 fixed_joints_map = dict()
 # fixed_joints_map.update({'j_wheel_1': 0., 'j_wheel_2': 0., 'j_wheel_3': 0., 'j_wheel_4': 0.})
 
-kin_dyn  = casadi_kin_dyn.CasadiKinDyn(urdf, fixed_joints=fixed_joints_map)
+kin_dyn  = casadi_kin_dyn.CasadiKinDyn(urdf)
 
 model = FullModelInverseDynamics(problem=prb,
                                  kd=kin_dyn,
                                  q_init=q_init,
-                                 base_init=base_init,
-                                 fixed_joint_map=fixed_joints_map)
+                                 base_init=base_init)
 
 bashCommand = 'rosrun robot_state_publisher robot_state_publisher'
 process = subprocess.Popen(bashCommand.split(), start_new_session=True)
@@ -149,9 +148,6 @@ for c in model.getContactMap():
     while c_phases[c].getEmptyNodes() > 0:
         c_phases[c].addPhase(stance)
 
-
-
-
 matrix_np = np.array(matrix)
 matrix_np_ = matrix_np
 # matrix_np_ = np.zeros((matrix_np.shape[0], matrix_np.shape[1] + 1))
@@ -177,7 +173,7 @@ reference = prb.createParameter('upper_body_reference', 23, nodes=range(ns+1))
 #     reference[i] = matrix[i][0]
 #    x y z;4 quan; yaw_joint , 6 left arm, 6 right arm, 1 grippers + 2 headjoints = 7 + 15
 
-prb.createResidual('upper_body_trajectory', 10 * (cs.vertcat(model.q[:7], model.q[-16:]) - reference))
+prb.createResidual('upper_body_trajectory', 5 * (cs.vertcat(model.q[:7], model.q[-16:]) - reference))
 # exit()
 
 reference.assign(matrix_np_.T)
@@ -187,7 +183,7 @@ print (reference.shape)
 # reference.assign(matrix 21 x 100)
 
 model.q.setBounds(model.q0, model.q0, nodes=0)
-# model.q.setBounds(model.q0, model.q0, nodes=ns)
+# model.q[0].setBounds(model.q0[0] + 1, model.q0[0] + 1, nodes=ns)
 model.v.setBounds(np.zeros(model.nv), np.zeros(model.nv), nodes=0)
 model.v.setBounds(np.zeros(model.nv), np.zeros(model.nv), nodes=ns)
 
@@ -196,8 +192,8 @@ q_max = kin_dyn.q_max()
 print(kin_dyn.joint_names())
 print(q_min)
 print(q_max)
-prb.createResidual('lower_limits', 30 * utils.barrier(model.q - q_min))
-prb.createResidual('upper_limits', 30 * utils.barrier1(model.q - q_max))
+prb.createResidual('lower_limits', 30 * utils.barrier(model.q[-3] - q_min[-3]))
+prb.createResidual('upper_limits', 30 * utils.barrier1(model.q[-3] - q_max[-3]))
 
 # prb.createResidual('support_polygon', wheel1 - whheel2 = fixed_disanace)
 f0 = [0, 0, kin_dyn.mass() / 4 * 9.81]
@@ -214,6 +210,8 @@ ti.bootstrap()
 
 solution = ti.solution
 print("solution['q'].shape[1] = ", solution['q'].shape)
+# print(solution['q'][12, :])
+# exit()
 ## publish plot data
 
 

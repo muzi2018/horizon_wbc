@@ -73,10 +73,10 @@ q_init = {
     "ankle_pitch_2": 0.301666,
     "ankle_pitch_3": 0.301667,
     "ankle_pitch_4": -0.30166,
-    "ankle_yaw_1": 0.746874,
-    "ankle_yaw_2": -0.746874,
-    "ankle_yaw_3": -0.746874,
-    "ankle_yaw_4": 0.746874,
+    "ankle_yaw_1": 0.,
+    "ankle_yaw_2": -0.,
+    "ankle_yaw_3": -0.,
+    "ankle_yaw_4": 0.,
     "d435_head_joint": 0,
     "hip_pitch_1": -1.25409,
     "hip_pitch_2": 1.25409,
@@ -177,7 +177,7 @@ reference = prb.createParameter('upper_body_reference', 23, nodes=range(ns+1))
 #     reference[i] = matrix[i][0]
 #    x y z;4 quan; yaw_joint , 6 left arm, 6 right arm, 1 grippers + 2 headjoints = 7 + 15
 
-prb.createResidual('upper_body_trajectory', 10 * (cs.vertcat(model.q[:7], model.q[-16:]) - reference))
+prb.createResidual('upper_body_trajectory', 1 * (cs.vertcat(model.q[:7], model.q[-16:]) - reference))
 # exit()
 
 reference.assign(matrix_np_.T)
