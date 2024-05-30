@@ -252,6 +252,8 @@ while time <= T:
     time += dt
     i += 1
     rate.sleep()
+# while 1:
+#     rate.sleep()
 
 exit()
 
