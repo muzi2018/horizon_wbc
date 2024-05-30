@@ -209,7 +209,7 @@ ti.bootstrap()
 
 
 solution = ti.solution
-print("solution['q'].shape[1] = ", solution['q'].shape)
+print("solution['q'].shape = ", solution['q'].shape)
 # print(solution['q'][12, :])
 # exit()
 ## publish plot data
