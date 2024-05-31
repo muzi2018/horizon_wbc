@@ -75,7 +75,6 @@ ctrl_mode_override = {
     'j_wheel_4': xbot.ControlMode.Velocity(),
 }
 robot.setControlMode(ctrl_mode_override)
-
 robot.sense()
 q_init = robot.getJointPositionMap()
 
@@ -262,6 +261,7 @@ while not opendoor_flag:
     rate.sleep()
 
 msg = Float64()
+
 while time <= T:
     msg.data = solution['q'][-3,i]
     pub_dagana.publish(msg)
@@ -271,13 +271,17 @@ while time <= T:
     time += dt
     i += 1
     rate.sleep()
-
-    
 exit()
 while not rospy.is_shutdown():
     repl = replay_trajectory.replay_trajectory(prb.getDt(), kin_dyn.joint_names(), solution['q'], kindyn=kin_dyn, trajectory_markers=model.getContactMap().keys())
     repl.replay(is_floating_base=True)
     rate.sleep()
+
+
+
+    
+
+
 
 
 
