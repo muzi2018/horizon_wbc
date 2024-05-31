@@ -66,8 +66,18 @@ cfg.set_string_parameter('framework', 'ROS')
 cfg.set_bool_parameter('is_model_floating_base', True)
 
 robot = xbot.RobotInterface(cfg)
+ctrl_mode_override = {
+    'j_wheel_1': xbot.ControlMode.Velocity(),
+    'j_wheel_2': xbot.ControlMode.Velocity(),
+    'j_wheel_3': xbot.ControlMode.Velocity(),
+    'j_wheel_4': xbot.ControlMode.Velocity(),
+}
+robot.setControlMode(ctrl_mode_override)
+
 robot.sense()
 q_init = robot.getJointPositionMap()
+# robot.setControlMode('position')
+
 # q_init = {
     # "ankle_pitch_1": -0.301666,
     # "ankle_pitch_2": 0.301666,
@@ -215,30 +225,29 @@ print("solution['q'].shape[1] = ", solution['q'].shape)
 ## publish plot data
 
 
-# publish solution server
-
-publish_bool = False
-def start_plot(req):
-    global publish_bool
-    publish_bool = not publish_bool
+# server
+opendrawer_flag = False
+def opendrawer(req):
+    global opendrawer_flag
+    opendrawer_flag = not opendrawer_flag
     return EmptyResponse()
-service = rospy.Service('plot', Empty, start_plot)
-
-# rospy.Service('service_name', ServiceType, callback_function).
+service = rospy.Service('opendrawer', Empty, opendrawer)
 rate = rospy.Rate(10) # 10hz
 
 pub = rospy.Publisher('/xbotcore/gripper/dagana_2/command', Float64, queue_size=1)
 msg = Float64()
-
 time = 0
 i = 0
 rate = rospy.Rate(1./dt)
 pub_dagana = rospy.Publisher('/xbotcore/gripper/dagana_2/command', Float64, queue_size=1)
+
+while not opendrawer_flag:
+    rate.sleep()
+
 while time <= T:
     msg.data = solution['q'][-3,i]
-    print("dagana_2 command = ", msg.data)
+    # print("dagana_2 command = ", msg.data)
     pub_dagana.publish(msg)
-
     robot.setPositionReference(solution['q'][7:,i])
     robot.setVelocityReference(solution['v'][6:,i])
     robot.move()
