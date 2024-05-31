@@ -241,8 +241,8 @@ i = 0
 rate = rospy.Rate(1./dt)
 pub_dagana = rospy.Publisher('/xbotcore/gripper/dagana_2/command', Float64, queue_size=1)
 
-while not opendrawer_flag:
-    rate.sleep()
+# while not opendrawer_flag:
+#     rate.sleep()
 
 while time <= T:
     msg.data = solution['q'][-3,i]
