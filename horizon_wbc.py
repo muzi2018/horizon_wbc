@@ -65,57 +65,56 @@ cfg.set_string_parameter('model_type', 'RBDL')
 cfg.set_string_parameter('framework', 'ROS')
 cfg.set_bool_parameter('is_model_floating_base', True)
 
-robot = xbot.RobotInterface(cfg)
-ctrl_mode_override = {
-    'j_wheel_1': xbot.ControlMode.Velocity(),
-    'j_wheel_2': xbot.ControlMode.Velocity(),
-    'j_wheel_3': xbot.ControlMode.Velocity(),
-    'j_wheel_4': xbot.ControlMode.Velocity(),
-}
-robot.setControlMode(ctrl_mode_override)
-
-robot.sense()
-q_init = robot.getJointPositionMap()
+# robot = xbot.RobotInterface(cfg)
+# ctrl_mode_override = {
+#     'j_wheel_1': xbot.ControlMode.Velocity(),
+#     'j_wheel_2': xbot.ControlMode.Velocity(),
+#     'j_wheel_3': xbot.ControlMode.Velocity(),
+#     'j_wheel_4': xbot.ControlMode.Velocity(),
+# }
+# robot.setControlMode(ctrl_mode_override)
+# robot.sense()
+# q_init = robot.getJointPositionMap()
 # robot.setControlMode('position')
 
-# q_init = {
-    # "ankle_pitch_1": -0.301666,
-    # "ankle_pitch_2": 0.301666,
-    # "ankle_pitch_3": 0.301667,
-    # "ankle_pitch_4": -0.30166,
-    # "ankle_yaw_1": 0.7070,
-    # "ankle_yaw_2": -0.7070,
-    # "ankle_yaw_3": -0.7070,
-    # "ankle_yaw_4": 0.7070,
-    # "d435_head_joint": 0,
-    # "hip_pitch_1": -1.25409,
-    # "hip_pitch_2": 1.25409,
-    # "hip_pitch_3": 1.25409,
-    # "hip_pitch_4": -1.25409,
-    # "hip_yaw_1": -0.746874,
-    # "hip_yaw_2": 0.746874,
-    # "hip_yaw_3": 0.746874,
-    # "hip_yaw_4": -0.746874,
-    # "j_arm1_1": 0.520149,
-    # "j_arm1_2": 0.320865,
-    # "j_arm1_3": 0.274669,
-    # "j_arm1_4": -2.23604,
-    # "j_arm1_5": 0.0500815,
-    # "j_arm1_6": -0.781461,
-    # "j_arm2_1": 0.520149,
-    # "j_arm2_2": -0.320865,
-    # "j_arm2_3": -0.274669,
-    # "j_arm2_4": -2.23604,
-    # "j_arm2_5": -0.0500815,
-    # "j_arm2_6": -0.781461,
-    # "knee_pitch_1": -1.55576,
-    # "knee_pitch_2": 1.55576,
-    # "knee_pitch_3": 1.55576,
-    # "knee_pitch_4": -1.55576,
-    # "torso_yaw": 3.56617e-13,
-    # "velodyne_joint": 0,
-    # "dagana_2_claw_joint": 0.
-# }
+q_init = {
+    "ankle_pitch_1": -0.301666,
+    "ankle_pitch_2": 0.301666,
+    "ankle_pitch_3": 0.301667,
+    "ankle_pitch_4": -0.30166,
+    "ankle_yaw_1": 0.7070,
+    "ankle_yaw_2": -0.7070,
+    "ankle_yaw_3": -0.7070,
+    "ankle_yaw_4": 0.7070,
+    "d435_head_joint": 0,
+    "hip_pitch_1": -1.25409,
+    "hip_pitch_2": 1.25409,
+    "hip_pitch_3": 1.25409,
+    "hip_pitch_4": -1.25409,
+    "hip_yaw_1": -0.746874,
+    "hip_yaw_2": 0.746874,
+    "hip_yaw_3": 0.746874,
+    "hip_yaw_4": -0.746874,
+    "j_arm1_1": 0.520149,
+    "j_arm1_2": 0.320865,
+    "j_arm1_3": 0.274669,
+    "j_arm1_4": -2.23604,
+    "j_arm1_5": 0.0500815,
+    "j_arm1_6": -0.781461,
+    "j_arm2_1": 0.520149,
+    "j_arm2_2": -0.320865,
+    "j_arm2_3": -0.274669,
+    "j_arm2_4": -2.23604,
+    "j_arm2_5": -0.0500815,
+    "j_arm2_6": -0.781461,
+    "knee_pitch_1": -1.55576,
+    "knee_pitch_2": 1.55576,
+    "knee_pitch_3": 1.55576,
+    "knee_pitch_4": -1.55576,
+    "torso_yaw": 3.56617e-13,
+    "velodyne_joint": 0,
+    "dagana_2_claw_joint": 0.
+}
 
 base_init = np.array([0, 0, 0.8, 0, 0, 0, 1])
 
@@ -244,6 +243,12 @@ pub_dagana = rospy.Publisher('/xbotcore/gripper/dagana_2/command', Float64, queu
 while not opendrawer_flag:
     rate.sleep()
 
+
+while not rospy.is_shutdown():
+    repl = replay_trajectory.replay_trajectory(prb.getDt(), kin_dyn.joint_names(), solution['q'], kindyn=kin_dyn, trajectory_markers=model.getContactMap().keys())
+    repl.replay(is_floating_base=True)
+    rate.sleep()
+exit()
 while time <= T:
     msg.data = solution['q'][-3,i]
     # print("dagana_2 command = ", msg.data)
@@ -254,11 +259,8 @@ while time <= T:
     time += dt
     i += 1
     rate.sleep()
-exit()
 
-while not rospy.is_shutdown():
-    repl = replay_trajectory.replay_trajectory(prb.getDt(), kin_dyn.joint_names(), solution['q'], kindyn=kin_dyn, trajectory_markers=model.getContactMap().keys())
-    repl.replay(is_floating_base=True)
-    rate.sleep()
+
+
 
 
