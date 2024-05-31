@@ -77,6 +77,7 @@ ctrl_mode_override = {
 robot.setControlMode(ctrl_mode_override)
 robot.sense()
 q_init = robot.getJointPositionMap()
+# robot.setControlMode('position')
 
 # server
 opendoor_flag = False
@@ -261,7 +262,6 @@ while not opendoor_flag:
     rate.sleep()
 
 msg = Float64()
-
 while time <= T:
     msg.data = solution['q'][-3,i]
     pub_dagana.publish(msg)
