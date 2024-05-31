@@ -14,7 +14,7 @@ from xbot_interface import xbot_interface as xbot
 import casadi_kin_dyn.py3casadi_kin_dyn as casadi_kin_dyn
 from scipy.spatial.transform import Rotation as R
 from pyquaternion import Quaternion
-
+from std_msgs.msg import Float64
 import casadi as cs
 import numpy as np
 import rospy
@@ -68,8 +68,24 @@ cfg.set_string_parameter('framework', 'ROS')
 cfg.set_bool_parameter('is_model_floating_base', True)
 
 robot = xbot.RobotInterface(cfg)
+ctrl_mode_override = {
+    'j_wheel_1': xbot.ControlMode.Velocity(),
+    'j_wheel_2': xbot.ControlMode.Velocity(),
+    'j_wheel_3': xbot.ControlMode.Velocity(),
+    'j_wheel_4': xbot.ControlMode.Velocity(),
+}
+robot.setControlMode(ctrl_mode_override)
+
 robot.sense()
 q_init = robot.getJointPositionMap()
+
+# server
+opendoor_flag = False
+def opendoor(req):
+    global opendoor_flag
+    opendoor_flag = not opendoor_flag
+    return EmptyResponse()
+service = rospy.Service('opendoor', Empty, opendoor)
 
 # q_init = {
 #     "ankle_pitch_1": -0.301666,
@@ -234,15 +250,21 @@ service = rospy.Service('plot', Empty, start_plot)
 
 
 
-rate = rospy.Rate(10) # 10hz
 
 
 time = 0
 i = 0
 rate = rospy.Rate(1./dt)
-# robot = xbot.RobotInterface(cfg)
+pub_dagana = rospy.Publisher('/xbotcore/gripper/dagana_2/command', Float64, queue_size=1)
+# opendrawer_flag
+# opendoor_flag
+while not opendoor_flag:
+    rate.sleep()
 
+msg = Float64()
 while time <= T:
+    msg.data = solution['q'][-3,i]
+    pub_dagana.publish(msg)
     robot.setPositionReference(solution['q'][7:,i])
     robot.setVelocityReference(solution['v'][6:,i])
     robot.move() 
