@@ -23,6 +23,7 @@ import os
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Path
 from sensor_msgs.msg import JointState
+from geometry_msgs.msg import PoseArray, Pose
 # from std_msgs.msg import Float64
 import std_msgs
 from std_srvs.srv import Empty, EmptyResponse
@@ -41,7 +42,7 @@ if srdf == '':
 
 index_ = 0
 ns = 0
-with open('/home/wang/horizon_wbc/pick.txt', 'r') as file:
+with open('/home/wang/horizon_wbc/output.txt', 'r') as file:
     lines = file.readlines()
 matrix = []
 for line in lines:
@@ -68,7 +69,7 @@ cfg.set_string_parameter('model_type', 'RBDL')
 cfg.set_string_parameter('framework', 'ROS')
 cfg.set_bool_parameter('is_model_floating_base', True)
 
-## Xbot
+# # Xbot
 # robot = xbot.RobotInterface(cfg)
 # ctrl_mode_override = {
 #     'j_wheel_1': xbot.ControlMode.Velocity(),
@@ -196,6 +197,7 @@ reference = prb.createParameter('upper_body_reference', 23, nodes=range(ns+1))
 #    x y z;4 quan; yaw_joint , 6 left arm, 6 right arm, 1 grippers + 2 headjoints = 7 + 15
 
 prb.createResidual('upper_body_trajectory', 5 * (cs.vertcat(model.q[:7], model.q[-16:]) - reference))
+# print(matrix_np_.shape)
 # exit()
 
 reference.assign(matrix_np_.T)
@@ -260,17 +262,13 @@ rate = rospy.Rate(1./dt)
 pub_dagana = rospy.Publisher('/xbotcore/gripper/dagana_2/command', JointState, queue_size=1)
 # opendrawer_flag
 # opendoor_flag
-
 # while not opendoor_flag:
 #     rate.sleep()
-
 msg = JointState()
 
-while not rospy.is_shutdown():
-    repl = replay_trajectory.replay_trajectory(prb.getDt(), kin_dyn.joint_names(), solution['q'], kindyn=kin_dyn, trajectory_markers=model.getContactMap().keys())
-    repl.replay(is_floating_base=True)
-    rate.sleep()
-exit()
+## publish plot data
+pub_sol = rospy.Publisher('pose_topic_sol', Pose, queue_size=1)
+pub_ref = rospy.Publisher('pose_topic_ref', Pose, queue_size=1)
 
 # while time <= T:
 #     # msg.data = solution['q'][-3,i]
@@ -283,6 +281,39 @@ exit()
 #     time += dt
 #     i += 1
 #     rate.sleep()
+
+print("solution['q] = ", solution['q'].shape) #solution['q] =  (47, 94)
+
+while not rospy.is_shutdown():
+    for i in range(solution['q'].shape[1]):
+        pose = Pose()
+        pose.position.x = solution['q'][0,i] 
+        pose.position.y = solution['q'][1,i]
+        pose.position.z = solution['q'][2,i]
+        pose.orientation.x = solution['q'][3,i]
+        pose.orientation.y = solution['q'][4,i]
+        pose.orientation.z = solution['q'][5,i]
+        pose.orientation.w = solution['q'][6,i]
+        pub_sol.publish(pose)
+        pose.position.x = matrix_np_[i,0] 
+        pose.position.y = matrix_np_[i,1]
+        pose.position.z = matrix_np_[i,2]
+        pose.orientation.x = matrix_np_[i,3]
+        pose.orientation.y = matrix_np_[i,4]
+        pose.orientation.z = matrix_np_[i,5]
+        pose.orientation.w = matrix_np_[i,6]
+        pub_ref.publish(pose)
+
+# publish solution
+    
+
+
+    # repl = replay_trajectory.replay_trajectory(prb.getDt(), kin_dyn.joint_names(), solution['q'], kindyn=kin_dyn, trajectory_markers=model.getContactMap().keys())
+    # repl.replay(is_floating_base=True)
+    rate.sleep()
+
+
+
 
 
 
