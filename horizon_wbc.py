@@ -302,7 +302,9 @@ pub_ref = rospy.Publisher('pose_topic_ref', Pose, queue_size=1)
 # openDagana(pub_dagana)
 
 while time <= T:
-    solution['q'][44,i] = 0.4
+    solution['q'][44,i] = 0.4 - i * 0.01
+    if solution['q'][44,i] <= 0.00:
+        solution['q'][44,i] = 0
     solution['v'][43,i] = 0.0
     robot.setPositionReference(solution['q'][7:,i])
     robot.setVelocityReference(solution['v'][6:,i])
