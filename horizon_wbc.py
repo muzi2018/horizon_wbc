@@ -302,11 +302,17 @@ pub_ref = rospy.Publisher('pose_topic_ref', Pose, queue_size=1)
 # openDagana(pub_dagana)
 
 while time <= T:
-    solution['q'][44,i] = 0.5
+    solution['q'][44,i] = 0.4
     solution['v'][43,i] = 0.0
     robot.setPositionReference(solution['q'][7:,i])
     robot.setVelocityReference(solution['v'][6:,i])
     robot.move() 
+
+    # posTrajectory = np.linspace(0.8, 0.2, 1000).tolist()
+    # for posPointNum in range(len(posTrajectory)):
+    #     # print("posPointNum = ", posPointNum)
+    #     daganaMsg = JointState()
+    #     daganaMsg.position.append(posTrajectory[posPointNum])
 
     time += dt
     if i == 80:
