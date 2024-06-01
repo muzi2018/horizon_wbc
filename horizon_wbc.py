@@ -27,10 +27,39 @@ from geometry_msgs.msg import PoseArray, Pose
 # from std_msgs.msg import Float64
 import std_msgs
 from std_srvs.srv import Empty, EmptyResponse
+
+
+
+
+def openDagana(publisher):
+    daganaRefRate = rospy.Rate(1000.0)
+    posTrajectory = np.linspace(1, 0.2, 1000).tolist()
+    for posPointNum in range(len(posTrajectory)):
+        # print("posPointNum = ", posPointNum)
+        daganaMsg = JointState()
+        daganaMsg.position.append(posTrajectory[posPointNum])
+        publisher.publish(daganaMsg)
+        daganaRefRate.sleep()
+    print("Gripper should be open! Continuing..")
+
+
+
+def closeDagana(publisher):
+    daganaRefRate = rospy.Rate(1000.0)
+    posTrajectory = np.linspace(0.2, 1, 1000).tolist()
+    for posPointNum in range(len(posTrajectory)):
+        daganaMsg = JointState()
+        daganaMsg.position.append(posTrajectory[posPointNum])
+        publisher.publish(daganaMsg)
+        daganaRefRate.sleep()
+    print("Gripper should be open! Continuing..")
+    print("If gripper is closed, press a key!")
+
+
+
+
+
 rospy.init_node('horizon_wbc_node')
-
-
-
 # load urdf and srdf to create model
 urdf = rospy.get_param('robot_description', default='')
 if urdf == '':
@@ -69,18 +98,22 @@ cfg.set_string_parameter('model_type', 'RBDL')
 cfg.set_string_parameter('framework', 'ROS')
 cfg.set_bool_parameter('is_model_floating_base', True)
 
-# # Xbot
-# robot = xbot.RobotInterface(cfg)
-# ctrl_mode_override = {
-#     'j_wheel_1': xbot.ControlMode.Velocity(),
-#     'j_wheel_2': xbot.ControlMode.Velocity(),
-#     'j_wheel_3': xbot.ControlMode.Velocity(),
-#     'j_wheel_4': xbot.ControlMode.Velocity(),
-# }
-# robot.setControlMode(ctrl_mode_override)
-# robot.sense()
-# q_init = robot.getJointPositionMap()
-# # robot.setControlMode('position')
+# Xbot
+robot = xbot.RobotInterface(cfg)
+ctrl_mode_override = {
+    'j_wheel_1': xbot.ControlMode.Velocity(),
+    'j_wheel_2': xbot.ControlMode.Velocity(),
+    'j_wheel_3': xbot.ControlMode.Velocity(),
+    'j_wheel_4': xbot.ControlMode.Velocity(),
+    'ankle_yaw_1': xbot.ControlMode.Velocity(),
+    'ankle_yaw_2': xbot.ControlMode.Velocity(),
+    'ankle_yaw_3': xbot.ControlMode.Velocity(),
+    'ankle_yaw_4': xbot.ControlMode.Velocity()
+}
+robot.setControlMode(ctrl_mode_override)
+robot.sense()
+q_init = robot.getJointPositionMap()
+# robot.setControlMode('position')
 
 # server
 opendoor_flag = False
@@ -90,44 +123,44 @@ def opendoor(req):
     return EmptyResponse()
 service = rospy.Service('opendoor', Empty, opendoor)
 
-q_init = {
-    "ankle_pitch_1": -0.301666,
-    "ankle_pitch_2": 0.301666,
-    "ankle_pitch_3": 0.301667,
-    "ankle_pitch_4": -0.30166,
-    "ankle_yaw_1": 0.7070,
-    "ankle_yaw_2": -0.7070,
-    "ankle_yaw_3": -0.7070,
-    "ankle_yaw_4": 0.7070,
-    "d435_head_joint": 0,
-    "hip_pitch_1": -1.25409,
-    "hip_pitch_2": 1.25409,
-    "hip_pitch_3": 1.25409,
-    "hip_pitch_4": -1.25409,
-    "hip_yaw_1": -0.746874,
-    "hip_yaw_2": 0.746874,
-    "hip_yaw_3": 0.746874,
-    "hip_yaw_4": -0.746874,
-    "j_arm1_1": 0.520149,
-    "j_arm1_2": 0.320865,
-    "j_arm1_3": 0.274669,
-    "j_arm1_4": -2.23604,
-    "j_arm1_5": 0.0500815,
-    "j_arm1_6": -0.781461,
-    "j_arm2_1": 0.520149,
-    "j_arm2_2": -0.320865,
-    "j_arm2_3": -0.274669,
-    "j_arm2_4": -2.23604,
-    "j_arm2_5": -0.0500815,
-    "j_arm2_6": -0.781461,
-    "knee_pitch_1": -1.55576,
-    "knee_pitch_2": 1.55576,
-    "knee_pitch_3": 1.55576,
-    "knee_pitch_4": -1.55576,
-    "torso_yaw": 3.56617e-13,
-    "velodyne_joint": 0,
-    "dagana_2_claw_joint": 0.
-}
+# q_init = {
+#     "ankle_pitch_1": -0.301666,
+#     "ankle_pitch_2": 0.301666,
+#     "ankle_pitch_3": 0.301667,
+#     "ankle_pitch_4": -0.30166,
+#     "ankle_yaw_1": 0.7070,
+#     "ankle_yaw_2": -0.7070,
+#     "ankle_yaw_3": -0.7070,
+#     "ankle_yaw_4": 0.7070,
+#     "d435_head_joint": 0,
+#     "hip_pitch_1": -1.25409,
+#     "hip_pitch_2": 1.25409,
+#     "hip_pitch_3": 1.25409,
+#     "hip_pitch_4": -1.25409,
+#     "hip_yaw_1": -0.746874,
+#     "hip_yaw_2": 0.746874,
+#     "hip_yaw_3": 0.746874,
+#     "hip_yaw_4": -0.746874,
+#     "j_arm1_1": 0.520149,
+#     "j_arm1_2": 0.320865,
+#     "j_arm1_3": 0.274669,
+#     "j_arm1_4": -2.23604,
+#     "j_arm1_5": 0.0500815,
+#     "j_arm1_6": -0.781461,
+#     "j_arm2_1": 0.520149,
+#     "j_arm2_2": -0.320865,
+#     "j_arm2_3": -0.274669,
+#     "j_arm2_4": -2.23604,
+#     "j_arm2_5": -0.0500815,
+#     "j_arm2_6": -0.781461,
+#     "knee_pitch_1": -1.55576,
+#     "knee_pitch_2": 1.55576,
+#     "knee_pitch_3": 1.55576,
+#     "knee_pitch_4": -1.55576,
+#     "torso_yaw": 3.56617e-13,
+#     "velodyne_joint": 0,
+#     "dagana_2_claw_joint": 0.
+# }
 
 base_init = np.array([0, 0, 0.8, 0, 0, 0, 1])
 
@@ -251,14 +284,10 @@ service = rospy.Service('plot', Empty, start_plot)
 # rospy.Service('service_name', ServiceType, callback_function).
 
 
-
-
-
-
-
 time = 0
 i = 0
 rate = rospy.Rate(1./dt)
+
 pub_dagana = rospy.Publisher('/xbotcore/gripper/dagana_2/command', JointState, queue_size=1)
 # opendrawer_flag
 # opendoor_flag
@@ -270,39 +299,44 @@ msg = JointState()
 pub_sol = rospy.Publisher('pose_topic_sol', Pose, queue_size=1)
 pub_ref = rospy.Publisher('pose_topic_ref', Pose, queue_size=1)
 
-# while time <= T:
-#     # msg.data = solution['q'][-3,i]
-#     msg.position.append(solution['q'][-3,i])
-#     # print("dagana state: ", solution['q'][-3,i])
-#     pub_dagana.publish(msg)
-#     robot.setPositionReference(solution['q'][7:,i])
-#     robot.setVelocityReference(solution['v'][6:,i])
-#     robot.move() 
-#     time += dt
-#     i += 1
-#     rate.sleep()
+# openDagana(pub_dagana)
 
-print("solution['q] = ", solution['q'].shape) #solution['q] =  (47, 94)
+while time <= T:
+    solution['q'][44,i] = 0.5
+    solution['v'][43,i] = 0.0
+    robot.setPositionReference(solution['q'][7:,i])
+    robot.setVelocityReference(solution['v'][6:,i])
+    robot.move() 
 
-while not rospy.is_shutdown():
-    for i in range(solution['q'].shape[1]):
-        pose = Pose()
-        pose.position.x = solution['q'][0,i] 
-        pose.position.y = solution['q'][1,i]
-        pose.position.z = solution['q'][2,i]
-        pose.orientation.x = solution['q'][3,i]
-        pose.orientation.y = solution['q'][4,i]
-        pose.orientation.z = solution['q'][5,i]
-        pose.orientation.w = solution['q'][6,i]
-        pub_sol.publish(pose)
-        pose.position.x = matrix_np_[i,0] 
-        pose.position.y = matrix_np_[i,1]
-        pose.position.z = matrix_np_[i,2]
-        pose.orientation.x = matrix_np_[i,3]
-        pose.orientation.y = matrix_np_[i,4]
-        pose.orientation.z = matrix_np_[i,5]
-        pose.orientation.w = matrix_np_[i,6]
-        pub_ref.publish(pose)
+    time += dt
+    if i == 80:
+        i = 80
+    else:
+        i += 1
+    rate.sleep()
+
+
+# print("solution['q] = ", solution['q'].shape) #solution['q] =  (47, 94)
+
+# while not rospy.is_shutdown():
+#     for i in range(solution['q'].shape[1]):
+#         pose = Pose()
+#         pose.position.x = solution['q'][0,i] 
+#         pose.position.y = solution['q'][1,i]
+#         pose.position.z = solution['q'][2,i]
+#         pose.orientation.x = solution['q'][3,i]
+#         pose.orientation.y = solution['q'][4,i]
+#         pose.orientation.z = solution['q'][5,i]
+#         pose.orientation.w = solution['q'][6,i]
+#         pub_sol.publish(pose)
+#         pose.position.x = matrix_np_[i,0] 
+#         pose.position.y = matrix_np_[i,1]
+#         pose.position.z = matrix_np_[i,2]
+#         pose.orientation.x = matrix_np_[i,3]
+#         pose.orientation.y = matrix_np_[i,4]
+#         pose.orientation.z = matrix_np_[i,5]
+#         pose.orientation.w = matrix_np_[i,6]
+#         pub_ref.publish(pose)
 
 # publish solution
     
@@ -310,7 +344,7 @@ while not rospy.is_shutdown():
 
     # repl = replay_trajectory.replay_trajectory(prb.getDt(), kin_dyn.joint_names(), solution['q'], kindyn=kin_dyn, trajectory_markers=model.getContactMap().keys())
     # repl.replay(is_floating_base=True)
-    rate.sleep()
+    # rate.sleep()
 
 
 
