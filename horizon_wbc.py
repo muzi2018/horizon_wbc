@@ -71,7 +71,7 @@ if srdf == '':
 
 index_ = 0
 ns = 0
-with open('/home/wang/horizon_wbc/output.txt', 'r') as file:
+with open('/home/wang/horizon_wbc/output_1.txt', 'r') as file:
     lines = file.readlines()
 matrix = []
 global value 
@@ -307,7 +307,7 @@ pub_sol = rospy.Publisher('pose_topic_sol', Pose, queue_size=1)
 pub_ref = rospy.Publisher('pose_topic_ref', Pose, queue_size=1)
 
 T_end = 4
-T = T_end
+# T = T_end
 while time <= T:
     # solution['q'][44,i] = 0.4 + i * 0.01
     # if solution['q'][44,i] >= 1.00:
