@@ -83,7 +83,7 @@ for line in lines:
     index_ = index_ + 1
 
 for i in range(20):
-    value[0] -= i * 0.004
+    value[0] -= i * 0.01
     matrix.append(value)
     ns = ns + 1
 
@@ -306,8 +306,8 @@ msg = JointState()
 pub_sol = rospy.Publisher('pose_topic_sol', Pose, queue_size=1)
 pub_ref = rospy.Publisher('pose_topic_ref', Pose, queue_size=1)
 
-T_end = 4
-# T = T_end
+T_end = 3
+T = T_end
 while time <= T:
     # solution['q'][44,i] = 0.4 + i * 0.01
     # if solution['q'][44,i] >= 1.00:
