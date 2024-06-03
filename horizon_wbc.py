@@ -77,19 +77,22 @@ if srdf == '':
 
 index_ = 0
 ns = 0
-with open('/home/wang/horizon_wbc/output_1.txt', 'r') as file:
+# with open('/home/wang/horizon_wbc/output_1.txt', 'r') as file:
+#     lines = file.readlines()
+with open('/home/wang/horizon_wbc/opendoor.txt', 'r') as file:
     lines = file.readlines()
 matrix = []
+
 global value 
 for line in lines:
-    if index_ % 1 == 0: 
+    if index_ % 6 == 0: 
         value = [float(x) for x in line.strip().split()]
         matrix.append(value)
         ns = ns + 1
     index_ = index_ + 1
 
 for i in range(20):
-    value[0] -= i * 0.01
+    value[0] -= i * 0.00
     matrix.append(value)
     ns = ns + 1
 
@@ -373,8 +376,8 @@ while time <= T:
     time += dt
     rate.sleep()
 
-scipy.io.savemat('dagana_2_tcp.mat', {'xyz': data})
-exit()
+# scipy.io.savemat('open_drawer.mat', {'xyz': data})
+scipy.io.savemat('open_door.mat', {'xyz': data})
 
 
 
