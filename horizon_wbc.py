@@ -46,7 +46,7 @@ def openDagana(publisher):
 
 def closeDagana(publisher):
     daganaRefRate = rospy.Rate(1000.0)
-    posTrajectory = np.linspace(0.2, 0.8, 1000).tolist()
+    posTrajectory = np.linspace(0.2, 0.9, 1000).tolist()
     for posPointNum in range(len(posTrajectory)):
         daganaMsg = JointState()
         daganaMsg.position.append(posTrajectory[posPointNum])
@@ -79,20 +79,20 @@ index_ = 0
 ns = 0
 # with open('/home/wang/horizon_wbc/output_1.txt', 'r') as file:
 #     lines = file.readlines()
-with open('/home/wang/horizon_wbc/opendoor.txt', 'r') as file:
+with open('/home/wang/horizon_wbc/output_1.txt', 'r') as file:
     lines = file.readlines()
 matrix = []
 
 global value 
 for line in lines:
-    if index_ % 6 == 0: 
+    if index_ % 1 == 0: 
         value = [float(x) for x in line.strip().split()]
         matrix.append(value)
         ns = ns + 1
     index_ = index_ + 1
 
 for i in range(20):
-    value[0] -= i * 0.00
+    value[0] -= i * 0.01
     matrix.append(value)
     ns = ns + 1
 
@@ -326,7 +326,7 @@ pub_state = rospy.Publisher('centauro_state', Float64MultiArray, queue_size=1)
 
 
 
-T_end = 3
+T_end = 3.2
 T = T_end
 
 # Tee = model_fk.getPose('base_link')
@@ -343,6 +343,8 @@ while time <= T:
         # solution['q'][44,i] = 1.00
     # solution['v'][43,i] = 0.0
     solution['q'][44,i] = 0.0
+    # if solution['q'][33,i] < 0.0:
+    #     solution['q'][33,i] = 0.0
     solution['v'][43,i] = 0.0
 
     ## update model
@@ -371,13 +373,13 @@ while time <= T:
     robot.setVelocityReference(solution['v'][6:,i])
     robot.move() 
     i += 1
-    # if i == 60:
-    #     closeDagana(pub_dagana)
+    if i == 50:
+        closeDagana(pub_dagana)
     time += dt
     rate.sleep()
 
-# scipy.io.savemat('open_drawer.mat', {'xyz': data})
-scipy.io.savemat('open_door.mat', {'xyz': data})
+scipy.io.savemat('open_drawer_sim_2110.mat', {'xyz': data})
+# scipy.io.savemat('open_door_sim_2053.mat', {'xyz': data})
 
 
 
