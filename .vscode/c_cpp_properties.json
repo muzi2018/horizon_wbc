@@ -5,7 +5,11 @@
       "includePath": [
         "${workspaceFolder}/**",
         "/opt/xbot/lib/**",
+        "/opt/xbot/**",
         "/opt/ros/noetic/**",
+        "~/forest_ws/src/**",
+        "~/forest_ws/install/**",
+        "~/forest_ws/lib/**"
         // "/home/wang/forest_ws/install/**"
       ],
       "compilerPath": "/usr/bin/gcc",

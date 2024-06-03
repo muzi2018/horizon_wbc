@@ -3,10 +3,8 @@ from horizon.rhc.model_description import FullModelInverseDynamics
 from horizon.rhc.taskInterface import TaskInterface
 from horizon.ros import replay_trajectory
 from horizon.utils import utils
-
 import phase_manager.pymanager as pymanager
 import phase_manager.pyphase as pyphase
-
 import std_msgs.msg
 from xbot_interface import config_options as co
 from xbot_interface import xbot_interface as xbot
@@ -27,7 +25,9 @@ from geometry_msgs.msg import PoseArray, Pose
 # from std_msgs.msg import Float64
 import std_msgs
 from std_srvs.srv import Empty, EmptyResponse
-
+from cartesian_interface.pyci_all import *
+from std_msgs.msg import Int32MultiArray, Float64MultiArray
+import pkgutil
 
 
 
@@ -51,9 +51,15 @@ def closeDagana(publisher):
         daganaMsg = JointState()
         daganaMsg.position.append(posTrajectory[posPointNum])
         publisher.publish(daganaMsg)
+
         daganaRefRate.sleep()
-    print("Gripper should be open! Continuing..")
-    print("If gripper is closed, press a key!")
+
+
+
+# package_path = [path for _, path, _ in pkgutil.iter_modules(xbot_interface.__path__)]
+# model_names = [name for _, name, _ in pkgutil.iter_modules(package_path)]
+# print("model_names = ")
+# print(model_names)
 
 
 
@@ -87,12 +93,11 @@ for i in range(20):
     matrix.append(value)
     ns = ns + 1
 
-ns = ns - 1
 
+
+ns = ns - 1
 T = 5.
 dt = T / ns
-
-
 prb = Problem(ns, receding=True, casadi_type=cs.SX)
 prb.setDt(dt)
 
@@ -107,6 +112,9 @@ cfg.set_bool_parameter('is_model_floating_base', True)
 
 # Xbot
 robot = xbot.RobotInterface(cfg)
+model_fk = robot.model()
+
+
 ctrl_mode_override = {
     'j_wheel_1': xbot.ControlMode.Velocity(),
     'j_wheel_2': xbot.ControlMode.Velocity(),
@@ -183,6 +191,10 @@ model = FullModelInverseDynamics(problem=prb,
                                  q_init=q_init,
                                  base_init=base_init)
 
+
+# print(model.getState())
+# model.fk("arm1_8")
+# model.fk("j_wheel_1")
 bashCommand = 'rosrun robot_state_publisher robot_state_publisher'
 process = subprocess.Popen(bashCommand.split(), start_new_session=True)
 
@@ -253,6 +265,8 @@ model.v.setBounds(np.zeros(model.nv), np.zeros(model.nv), nodes=ns)
 
 q_min = kin_dyn.q_min()
 q_max = kin_dyn.q_max()
+
+
 print(kin_dyn.joint_names())
 print(q_min)
 print(q_max)
@@ -305,9 +319,16 @@ msg = JointState()
 ## publish plot data
 pub_sol = rospy.Publisher('pose_topic_sol', Pose, queue_size=1)
 pub_ref = rospy.Publisher('pose_topic_ref', Pose, queue_size=1)
+pub_state = rospy.Publisher('centauro_state', Float64MultiArray, queue_size=1)
+
+
 
 T_end = 3
 T = T_end
+
+# Tee = model_fk.getPose('dagana_2_tcp')
+
+# exit()
 while time <= T:
     # solution['q'][44,i] = 0.4 + i * 0.01
     # if solution['q'][44,i] >= 1.00:
@@ -315,20 +336,41 @@ while time <= T:
     # solution['v'][43,i] = 0.0
     solution['q'][44,i] = 0.0
     solution['v'][43,i] = 0.0
+
+    ## update model
+    q = model_fk.getJointPosition()
+    # qdot = model_fk.getJointVelocity()
+    # qddot = model_fk.getJointAcceleration()
+    # q += dt * qdot + 0.5 * pow(dt, 2) * qddot
+    # qdot += dt * qddot
+    qdot = solution['v'][:,i]
+    qddot = solution['a'][:,i]
+    q += dt * qdot + 0.5 * pow(dt, 2) * qddot
+    qdot += dt * qddot
+    model_fk.setJointPosition(q)
+    model_fk.setJointVelocity(qdot)
+    model_fk.setJointAcceleration(qddot)
+    model_fk.update()
+    Tee = model_fk.getPose('base_link')
+
+    print('end effector pose w.r.t. world frame is:\n{}'.format(Tee))
+
     robot.setPositionReference(solution['q'][7:,i])
     robot.setVelocityReference(solution['v'][6:,i])
     robot.move() 
+    
+
+
+
     i += 1
     # if i == 60:
     #     closeDagana(pub_dagana)
     time += dt
-    # if i >= 80:
-    #     i = 80
-    print("i = " , i)
-    print("t = ", time)
-
     rate.sleep()
 exit()
+
+
+
 
 # print("solution['q] = ", solution['q'].shape) #solution['q] =  (47, 94)
 
@@ -359,18 +401,3 @@ exit()
     # repl = replay_trajectory.replay_trajectory(prb.getDt(), kin_dyn.joint_names(), solution['q'], kindyn=kin_dyn, trajectory_markers=model.getContactMap().keys())
     # repl.replay(is_floating_base=True)
     # rate.sleep()
-
-
-
-
-
-
-
-    
-
-
-
-
-
-
-
