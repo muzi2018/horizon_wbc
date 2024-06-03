@@ -28,7 +28,7 @@ from std_srvs.srv import Empty, EmptyResponse
 from cartesian_interface.pyci_all import *
 from std_msgs.msg import Int32MultiArray, Float64MultiArray
 import pkgutil
-
+import scipy.io
 
 
 def openDagana(publisher):
@@ -326,9 +326,14 @@ pub_state = rospy.Publisher('centauro_state', Float64MultiArray, queue_size=1)
 T_end = 3
 T = T_end
 
-# Tee = model_fk.getPose('dagana_2_tcp')
+# Tee = model_fk.getPose('base_link')
+# print('end effector pose w.r.t. world frame is:\n{}'.format(Tee))
+# print(type(Tee))
+# print(Tee.translation)
+num_T = T // dt
+print("num_T = ", num_T+1)
+data = np.zeros((3, int(num_T+1)))
 
-# exit()
 while time <= T:
     # solution['q'][44,i] = 0.4 + i * 0.01
     # if solution['q'][44,i] >= 1.00:
@@ -339,10 +344,6 @@ while time <= T:
 
     ## update model
     q = model_fk.getJointPosition()
-    # qdot = model_fk.getJointVelocity()
-    # qddot = model_fk.getJointAcceleration()
-    # q += dt * qdot + 0.5 * pow(dt, 2) * qddot
-    # qdot += dt * qddot
     qdot = solution['v'][:,i]
     qddot = solution['a'][:,i]
     q += dt * qdot + 0.5 * pow(dt, 2) * qddot
@@ -351,22 +352,28 @@ while time <= T:
     model_fk.setJointVelocity(qdot)
     model_fk.setJointAcceleration(qddot)
     model_fk.update()
-    Tee = model_fk.getPose('base_link')
-
-    print('end effector pose w.r.t. world frame is:\n{}'.format(Tee))
+    ## generate data and save
+    Tee = model_fk.getPose('dagana_2_tcp')
+    # print('end effector pose w.r.t. world frame is:\n{}'.format(Tee))
+    # print(Tee)
+    # print(type(Tee.translation))
+    # print(Tee.translation.shape)
+    print("i = ", i)
+    print("data.shape = ", data.shape)
+    data[0, i] = Tee.translation[0]
+    data[1, i] = Tee.translation[1]
+    data[2, i] = Tee.translation[2]
 
     robot.setPositionReference(solution['q'][7:,i])
     robot.setVelocityReference(solution['v'][6:,i])
     robot.move() 
-    
-
-
-
     i += 1
     # if i == 60:
     #     closeDagana(pub_dagana)
     time += dt
     rate.sleep()
+
+scipy.io.savemat('dagana_2_tcp.mat', {'xyz': data})
 exit()
 
 
