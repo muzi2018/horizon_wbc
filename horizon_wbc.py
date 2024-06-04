@@ -94,7 +94,7 @@ for line in lines:
     index_ = index_ + 1
 
 for i in range(20):
-    value[0] -= i * 0.01
+    value[0] -= i * 0.005
     matrix.append(value)
     ns = ns + 1
 
@@ -328,7 +328,7 @@ pub_state = rospy.Publisher('centauro_state', Float64MultiArray, queue_size=1)
 
 
 
-T_end = 3.2
+T_end = 3.5
 T = T_end
 
 # Tee = model_fk.getPose('base_link')
@@ -366,6 +366,8 @@ while time <= T:
     # print(type(Tee.translation))
     # print(Tee.translation.shape)
     print("i = ", i)
+    print("time = ", time)
+    
     print("data.shape = ", data.shape)
     data[0, i] = Tee.translation[0]
     data[1, i] = Tee.translation[1]
