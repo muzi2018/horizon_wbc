@@ -8,6 +8,8 @@ import phase_manager.pyphase as pyphase
 import std_msgs.msg
 from xbot_interface import config_options as co
 from xbot_interface import xbot_interface as xbot
+from datetime import datetime
+
 
 import casadi_kin_dyn.py3casadi_kin_dyn as casadi_kin_dyn
 from scipy.spatial.transform import Rotation as R
@@ -377,8 +379,15 @@ while time <= T:
         closeDagana(pub_dagana)
     time += dt
     rate.sleep()
+now = datetime.now()
+time_str = now.strftime("%m%d_%H%_M")
+current_directory = os.getcwd()
+file_name = f'{current_directory}/data/open_drawer_sim_{time_str}.mat'
+scipy.io.savemat(file_name, {'xyz': data})
+print(f"Data saved to {file_name}")
 
-scipy.io.savemat('open_drawer_sim_2110.mat', {'xyz': data})
+
+# scipy.io.savemat('open_drawer_sim_2110.mat', {'xyz': data})
 # scipy.io.savemat('open_door_sim_2053.mat', {'xyz': data})
 
 
